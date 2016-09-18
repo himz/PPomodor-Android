@@ -1,6 +1,7 @@
 package com.himz.ppomodoro;
 
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -222,6 +223,9 @@ public class MainActivity extends AppCompatActivity {
 
       //noinspection SimplifiableIfStatement
       if (id == R.id.action_settings) {
+         /*return true;*/
+         Intent i = new Intent(this, SettingsActivity.class);
+         startActivity(i);
          return true;
       }
 
