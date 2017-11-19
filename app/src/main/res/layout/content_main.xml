@@ -70,8 +70,8 @@
         android:text="Start"
         android:id="@+id/btnStart"
         android:layout_alignTop="@+id/btnStop"
-        android:layout_alignLeft="@+id/txtCountDown"
-        android:layout_alignStart="@+id/txtCountDown" />
+        android:layout_alignLeft="@+id/btnStop"
+        android:layout_alignStart="@+id/btnStop" />
 
     <Button
         android:layout_width="wrap_content"
@@ -79,8 +79,7 @@
         android:text="Stop"
         android:id="@+id/btnStop"
         android:layout_centerVertical="true"
-        android:layout_alignRight="@+id/txtCountDown"
-        android:layout_alignEnd="@+id/txtCountDown" />
+        android:layout_centerHorizontal="true" />
 
     <TextView
         android:layout_width="wrap_content"

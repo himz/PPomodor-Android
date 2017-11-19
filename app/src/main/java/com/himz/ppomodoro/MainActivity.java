@@ -2,10 +2,12 @@ package com.himz.ppomodoro;
 
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -15,18 +17,21 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.TextView;
-import android.util.Log;
+import android.widget.Toast;
+
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
    /* Constants */
-   private static final long POMODOR0_MINUTES = 1;
-   private static final long BREAK_MINUTES = 1;
-   private static final long ROUND_END_MINUTES = 20;
    private static final long INTERVAL = 1000;
-   private static final long POMODORO_COUNT_PER_ROUND = 4;
-   private static final long BREAK_COUNT_PER_ROUND = 4;
    public static final String DEFAULT_CLOCK_TEXT = "00:00";
+
+   /* Preference Variables */
+   private static long pomodoroMinutes = 25;
+   private static long breakMinutes = 5;
+   private static long roundEndMinutes = 20;
+   private static long pomodoroCountPerRound = 4;
+   private static long breakCountPerRound = 4;
 
    /* UI Mappers */
    private Button btnStart;
@@ -57,13 +62,32 @@ public class MainActivity extends AppCompatActivity {
    private int elapsedTimeInSeconds;
 
    void init() {
-      timeForSession = convertMinutesToMillis(POMODOR0_MINUTES);
+      timeForSession = convertMinutesToMillis(pomodoroMinutes);
       interval = INTERVAL;
       currentPomodoroNumber = 0;
       currentBreakNumber = 0;
       currentRoundNumber = 0;
       state = 0;
       txtTomato = new TextView[4];
+
+      SharedPreferences appSettings = PreferenceManager.getDefaultSharedPreferences(this);
+      SharedPreferences.Editor prefEditor = appSettings.edit();
+      prefEditor.putString("UserName", "Guest123");
+      prefEditor.putBoolean("PaidUser", false);
+      prefEditor.putInt("PomodoroMinutes", 2);
+      prefEditor.putInt("BreakMinutes", 2);
+      prefEditor.putInt("RoundEndMinutes", 4);
+      prefEditor.putInt("PomodoroCountPerRound", 4);
+      prefEditor.putBoolean("AutoStartBreak", true);
+      prefEditor.commit();
+      String test = appSettings.getString("example_text", "Himz");
+      Toast.makeText(this, (String)test, Toast.LENGTH_LONG).show();
+      pomodoroMinutes = appSettings.getInt("PomodoroMinutes",25);
+      breakMinutes = appSettings.getInt("BreakMinutes", 5);
+      roundEndMinutes = appSettings.getInt("RoundEndMinutes", 20);
+      pomodoroCountPerRound = appSettings.getInt("PomodoroCountPerRound", 4);
+      breakCountPerRound = pomodoroCountPerRound;
+
    }
 
    long convertMinutesToMillis(long minutes) {
@@ -74,21 +98,21 @@ public class MainActivity extends AppCompatActivity {
       if (state == 2) {
             /* It is a break */
          currentBreakNumber++;
-         if (currentBreakNumber == BREAK_COUNT_PER_ROUND) {
-            timeForSession = convertMinutesToMillis(ROUND_END_MINUTES);
+         if (currentBreakNumber == breakCountPerRound) {
+            timeForSession = convertMinutesToMillis(roundEndMinutes);
          } else {
-            timeForSession = convertMinutesToMillis(BREAK_MINUTES);
+            timeForSession = convertMinutesToMillis(breakMinutes);
          }
       } else if (state == 1) {
             /* It is a pomodoro*/
-         if (currentBreakNumber == BREAK_COUNT_PER_ROUND) {
+         if (currentBreakNumber == breakCountPerRound) {
                 /* It is a new round */
             currentRoundNumber++;
             currentBreakNumber = 0;
             currentPomodoroNumber = 0;
          }
          currentPomodoroNumber++;
-         timeForSession = convertMinutesToMillis(POMODOR0_MINUTES);
+         timeForSession = convertMinutesToMillis(pomodoroMinutes);
       } else if (state == 0) {
             /* Signify state after every Break */
       }
@@ -99,15 +123,21 @@ public class MainActivity extends AppCompatActivity {
       if (state == 2) {
          txtTomato[currentPomodoroNumber - 1].setTextColor(Color.GREEN);
          txtStateValue.setText("BREAK TIME - Move, Drink water");
+         btnStart.setVisibility(View.INVISIBLE);
+         btnStop.setVisibility(View.VISIBLE);
       } else if (state == 1) {
          if (currentBreakNumber == 0 && currentPomodoroNumber == 1) {
             /* It is start of new Round, new Pomodoro */
             resetProgress();
          }
+         btnStart.setVisibility(View.INVISIBLE);
+         btnStop.setVisibility(View.VISIBLE);
          txtStateValue.setText("Focus on one task for 25 mins");
          txtTomato[currentPomodoroNumber - 1].setTextColor(Color.YELLOW);
       } else if (state == 0) {
          txtStateValue.setText("GetReady, Start a Pomodoro");
+         btnStop.setVisibility(View.INVISIBLE);
+         btnStart.setVisibility(View.VISIBLE);
       }
       txtState.setText(Integer.valueOf(state).toString());
       txtPomodoroNumber.setText(Integer.valueOf(currentPomodoroNumber).toString());
@@ -122,7 +152,10 @@ public class MainActivity extends AppCompatActivity {
          t.setTextColor(Color.LTGRAY);
       }
    }
-
+   @Override
+   public void onBackPressed () {
+      moveTaskToBack (true);
+   }
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
@@ -149,9 +182,7 @@ public class MainActivity extends AppCompatActivity {
       txtTomato[1] = (TextView) this.findViewById(R.id.txtTomato2);
       txtTomato[2] = (TextView) this.findViewById(R.id.txtTomato3);
       txtTomato[3] = (TextView) this.findViewById(R.id.txtTomato4);
-
-      resetProgress();
-
+      txtCountdownTimer = (TextView) this.findViewById(R.id.txtCountDown);
 
         /* Button Start code goes here */
       btnStart = (Button) this.findViewById(R.id.btnStart);
@@ -175,16 +206,17 @@ public class MainActivity extends AppCompatActivity {
             } else if (state == 1) {
                /* End the current pomodoro, auto start the break */
                startBreak();
-            } else if(state == 0 ) {
+            } else if(state == 2) {
                /* state == 2 -- stop the break - start initial state */
                startIdleState();
             }
             updateUI(state);
          }
       });
-
+      resetProgress();
+      updateUI(state);
       pomodoroCounter = new CounterClass(timeForSession, interval);
-      txtCountdownTimer = (TextView) this.findViewById(R.id.txtCountDown);
+
    }
    void startIdleState() {
       pomodoroCounter.cancel();
@@ -224,6 +256,7 @@ public class MainActivity extends AppCompatActivity {
       //noinspection SimplifiableIfStatement
       if (id == R.id.action_settings) {
          /*return true;*/
+         moveTaskToBack (true);
          Intent i = new Intent(this, SettingsActivity.class);
          startActivity(i);
          return true;
